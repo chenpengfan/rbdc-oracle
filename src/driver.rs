@@ -13,11 +13,9 @@ impl Driver for OracleDriver {
         "oracle"
     }
 
-    fn connect(&self, url: &str) -> BoxFuture<Result<Box<dyn Connection>, Error>> {
+    fn connect(&self, _url: &str) -> BoxFuture<Result<Box<dyn Connection>, Error>> {
         Box::pin(async move {
-            let opt: OracleConnectOptions = OracleConnectOptions::from_str(url)?;
-            let conn = OracleConnection::establish(&opt).await?;
-            Ok(Box::new(conn) as Box<dyn Connection>)
+            unimplemented!();
         })
     }
 
