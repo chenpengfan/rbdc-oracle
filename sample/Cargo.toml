@@ -1,0 +1,18 @@
+[package]
+name = "sample"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+rbs = "0.1"
+rbdc = { version = "0.1", default-features = false }
+rbdc-oracle={path="../"}
+rbatis = { version = "4.0" }
+serde_json = "1"
+fastdate = { version = "0.1"}
+bigdecimal = { version = "0.2.0", features = ["serde"] }
+log = "0.4.2"
+fast_log = "1.5"
+tokio = { version = "1.12", features = ["full"] }
+chrono = "0.4.19"
