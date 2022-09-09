@@ -50,6 +50,12 @@ impl Encode for Value {
             Value::String(str)=>{
                 vec.push(Box::new(str));
             }
+            Value::I32(int)=>{
+                vec.push(Box::new(int));
+            }
+            Value::I64(int)=>{
+                vec.push(Box::new(int));
+            }
             //TODO: more types!
             _=>{
                 vec.push(Box::new(self.to_string()));
