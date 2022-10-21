@@ -1,6 +1,6 @@
 [package]
-name = "sample"
-version = "0.1.1"
+name = "example"
+version = "0.1.2"
 edition = "2021"
 
 [dependencies]
@@ -8,7 +8,7 @@ serde = { version = "1", features = ["derive"] }
 rbs = "0.1"
 rbdc = { version = "0.1", default-features = false }
 rbdc-oracle={path="../"}
-rbatis = { version = "4.0" }
+rbatis = { version = "4.0.39" }
 serde_json = "1"
 fastdate = { version = "0.1"}
 bigdecimal = { version = "0.2.0", features = ["serde"] }
