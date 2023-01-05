@@ -8,7 +8,7 @@ serde = { version = "1", features = ["derive"] }
 rbs = "0.1"
 rbdc = { version = "0.1", default-features = false }
 rbdc-oracle={path="../"}
-rbatis = { version = "4.0.47" }
+rbatis = { version = "4.0.49" }
 serde_json = "1"
 fastdate = { version = "0.1"}
 bigdecimal = { version = "0.2.0", features = ["serde"] }
