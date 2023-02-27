@@ -22,7 +22,10 @@ pub struct Student{
 crud!(Student{},"t_student");
 
 #[py_sql("select name,age,birthday,sex,id_card,score,id_card from t_student where sex = #{sex} ")]
-async fn simple_select(rb: &Rbatis,sex:i32) -> Vec<Student> {}
+async fn simple_py_sql_select(rb: &Rbatis,sex:i32) -> Vec<Student> {}
+
+#[sql("select name,age,birthday,sex,id_card,score,id_card from t_student where sex = ? ")]
+async fn simple_sql_select(rb: &Rbatis,sex:i32) -> Vec<Student> {}
 
 #[tokio::main]
 async fn main() {
@@ -38,8 +41,13 @@ async fn main() {
     )
     .expect("rbatis link database fail");
     
-    //select
-    let select_result = simple_select(&rb,2).await.expect("query failed");
+    //sql select
+    let select_result = simple_sql_select(&rb,2).await.expect("query failed");
+    assert_eq!(select_result.len(),2);
+    println!("{:?}",select_result);
+    
+    //py_sql select
+    let select_result = simple_py_sql_select(&rb,2).await.expect("query failed");
     assert_eq!(select_result.len(),2);
     println!("{:?}",select_result);
 
