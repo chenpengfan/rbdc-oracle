@@ -1,6 +1,6 @@
 use bigdecimal::BigDecimal;
 use rbatis::{Rbatis, py_sql};
-use rbdc::{datetime::FastDateTime};
+use rbdc::{datetime::DateTime};
 use rbdc_oracle::driver::OracleDriver;
 use rbdc_oracle::options::OracleConnectOptions;
 use serde::{Serialize, Deserialize};
@@ -15,7 +15,7 @@ pub struct Student{
     pub id_card : i64,
     pub name : String,
     pub score : BigDecimal,
-    pub birthday : Option<FastDateTime>,
+    pub birthday : Option<DateTime>,
     pub sex : i32,
     pub age: Option<i16>,
 }
@@ -56,7 +56,7 @@ async fn main() {
         id_card : 2800000000,
         name : "小王".to_string(),
         score : BigDecimal::from_str("80").unwrap(),
-        birthday : Some(FastDateTime::from_str("2022-10-01 10:00:00.000").unwrap()),
+        birthday : Some(DateTime::from_str("2022-10-01 10:00:00.000").unwrap()),
         sex : 1,
         age: Some(20)
     };
@@ -68,7 +68,7 @@ async fn main() {
         id_card : 2200000000,
         name : "小红".to_string(),
         score : BigDecimal::from_str("65.5").unwrap(),
-        birthday : Some(FastDateTime::from_str("2002-09-01 14:03:20.000").unwrap()),
+        birthday : Some(DateTime::from_str("2002-09-01 14:03:20.000").unwrap()),
         sex : 2,
         age: Some(21)
     };

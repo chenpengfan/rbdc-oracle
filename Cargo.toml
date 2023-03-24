@@ -1,6 +1,6 @@
 [package]
 name = "rbdc-oracle"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2021"
 description = "a simple oracle driver for rbatis"
 readme = "Readme.md"
@@ -8,8 +8,8 @@ authors = ["chenpengfan<chenpengfan1996@gmail.com>"]
 license = "Apache-2.0"
 
 [dependencies]
-rbs = "0.1"
-rbdc = { version = "0.1"}
+rbs = "4.3"
+rbdc = "4.3"
 oracle = { version="0.5", features = ["chrono"]}
 serde = "1"
 serde_json = "1"

@@ -1,6 +1,6 @@
 use bigdecimal::BigDecimal;
 use oracle::sql_type::OracleType;
-use rbdc::{datetime::FastDateTime, Error};
+use rbdc::{datetime::DateTime, Error};
 use rbs::Value;
 use std::str::FromStr;
 
@@ -60,7 +60,7 @@ impl Decode for Value {
                 return Ok(Value::I64(a));
             }
             OracleType::Date => {
-                let a = FastDateTime::from_str(&value)?;
+                let a = DateTime::from_str(&value)?;
                 return Ok(Value::from(a));
             }
             //TODO: more types!

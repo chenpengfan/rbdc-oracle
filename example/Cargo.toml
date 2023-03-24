@@ -5,8 +5,8 @@ edition = "2021"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-rbs = "0.1"
-rbdc = { version = "0.1", default-features = false }
+rbs = "4.3"
+rbdc = { version = "4.3", default-features = false }
 rbdc-oracle={path="../"}
 rbatis = { version = "4.0.58" }
 serde_json = "1"
