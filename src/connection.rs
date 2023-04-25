@@ -22,13 +22,13 @@ impl Connection for OracleConnection {
         sql: &str,
         params: Vec<Value>,
     ) -> BoxFuture<Result<Vec<Box<dyn Row>>, rbdc::Error>> {
-        let sql:String = OracleDriver {}.pub_exchange(sql);
+        let sql: String = OracleDriver {}.pub_exchange(sql);
         Box::pin(async move {
             let mut p = Vec::with_capacity(params.len());
             for x in params {
                 x.encode(&mut p).map_err(|e| Error::from(e.to_string()))?
             }
-            let p:Vec<&dyn ToSql> = p.iter().map(|s| &**s).collect();
+            let p: Vec<&dyn ToSql> = p.iter().map(|s| &**s).collect();
             let builder = self.conn.statement(&sql);
             let mut stmt = builder.build().map_err(|e| Error::from(e.to_string()))?;
             let rows = stmt.query(&p).map_err(|e| Error::from(e.to_string()))?;
@@ -81,28 +81,54 @@ impl Connection for OracleConnection {
         sql: &str,
         params: Vec<Value>,
     ) -> BoxFuture<Result<ExecResult, rbdc::Error>> {
-        let sql:String = OracleDriver {}.pub_exchange(sql);
-        Box::pin(async move {
-            let mut p = Vec::with_capacity(params.len());
-            for x in params {
-                x.encode(&mut p).map_err(|e| Error::from(e.to_string()))?
-            }
-            let p:Vec<&dyn ToSql> = p.iter().map(|s| &**s).collect();
-            let v = self
-                .conn
-                .execute(&sql, &p)
-                .map_err(|e| Error::from(e.to_string()))?;
-            let rows_affected = v.row_count().map_err(|e| Error::from(e.to_string()))?;
-            self.conn.commit().map_err(|e| Error::from(e.to_string()))?;
-            Ok(ExecResult {
-                rows_affected: rows_affected,
-                last_insert_id: Value::Null,
+        if sql == "begin" {
+            Box::pin(async move {
+                Ok(ExecResult {
+                    rows_affected: 0,
+                    last_insert_id: Value::Null,
+                })
             })
-        })
+        } else if sql == "commit" {
+            Box::pin(async move {
+                self.conn.commit().unwrap();
+                Ok(ExecResult {
+                    rows_affected: 0,
+                    last_insert_id: Value::Null,
+                })
+            })
+        } else if sql == "rollback" {
+            Box::pin(async move {
+                self.conn.rollback().unwrap();
+                Ok(ExecResult {
+                    rows_affected: 0,
+                    last_insert_id: Value::Null,
+                })
+            })
+        } else {
+            let sql: String = OracleDriver {}.pub_exchange(sql);
+            Box::pin(async move {
+                let mut p = Vec::with_capacity(params.len());
+                for x in params {
+                    x.encode(&mut p).map_err(|e| Error::from(e.to_string()))?
+                }
+                let p: Vec<&dyn ToSql> = p.iter().map(|s| &**s).collect();
+                let v = self
+                    .conn
+                    .execute(&sql, &p)
+                    .map_err(|e| Error::from(e.to_string()))?;
+                let rows_affected = v.row_count().map_err(|e| Error::from(e.to_string()))?;
+                // self.conn.commit().map_err(|e| Error::from(e.to_string()))?;
+                Ok(ExecResult {
+                    rows_affected,
+                    last_insert_id: Value::Null,
+                })
+            })
+        }
     }
 
     fn close(&mut self) -> BoxFuture<Result<(), rbdc::Error>> {
         Box::pin(async move {
+            self.conn.commit().map_err(|e| Error::from(e.to_string()))?;
             self.conn.close().map_err(|e| Error::from(e.to_string()))?;
             Ok(())
         })

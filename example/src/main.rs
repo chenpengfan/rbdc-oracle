@@ -40,7 +40,10 @@ async fn main() {
         },
     )
     .expect("rbatis link database fail");
-    
+
+    //execute init.sql before
+
+
     //sql select
     let select_result = simple_sql_select(&rb,2).await.expect("query failed");
     assert_eq!(select_result.len(),2);
@@ -51,6 +54,9 @@ async fn main() {
     assert_eq!(select_result.len(),2);
     println!("{:?}",select_result);
 
+    //begin transaction
+    let mut tx = rb.acquire_begin().await.unwrap();
+
     //insert
     let new_stu = Student{
         id_card : 2800000000,
@@ -60,7 +66,7 @@ async fn main() {
         sex : 1,
         age: Some(20)
     };
-    let insert_result = Student::insert(&mut rb,&new_stu).await.expect("insert failed");
+    let insert_result = Student::insert(&mut tx,&new_stu).await.expect("insert failed");
     assert_eq!(insert_result.rows_affected,1);
 
     //update
@@ -72,11 +78,50 @@ async fn main() {
         sex : 2,
         age: Some(21)
     };
-    let insert_result = Student::update_by_column(&mut rb,&update_stu,"id_card").await.expect("update failed");
-    assert_eq!(insert_result.rows_affected,1);
+    let update_result = Student::update_by_column(&mut tx,&update_stu,"id_card").await.expect("update failed");
+    assert_eq!(update_result.rows_affected,1);
 
     //delete
-    let insert_result = Student::delete_by_column(&mut rb,"id_card","2500000000").await.expect("delete failed");
+    let delete_result = Student::delete_by_column(&mut tx,"id_card","2500000000").await.expect("delete failed");
+    assert_eq!(delete_result.rows_affected,1);
+
+    //select in transaction
+    let selected =
+        Student::select_by_column(&mut tx,"id_card","2500000000").await.expect("select failed");
+    assert_eq!(selected.len(),0);
+
+    //rollback transaction
+    tx.rollback().await.expect("rollback failed");
+
+    //select after transaction
+    let selected =
+        Student::select_by_column(&mut tx,"id_card","2500000000").await.expect("select failed");
+    assert_eq!(selected.len(),1);
+
+    //begin new transaction
+    let mut tx = rb.acquire_begin().await.unwrap();
+
+    //insert in new transaction
+    let new_stu = Student{
+        id_card : 2800000000,
+        name : "小王".to_string(),
+        score : BigDecimal::from_str("80").unwrap(),
+        birthday : Some(DateTime::from_str("2022-10-01 10:00:00.000").unwrap()),
+        sex : 1,
+        age: Some(20)
+    };
+    let insert_result = Student::insert(&mut tx,&new_stu).await.expect("insert failed");
     assert_eq!(insert_result.rows_affected,1);
+
+    //commit new transaction
+    tx.commit().await.expect("commit failed");
+
+    //select after new transaction
+    let selected =
+        Student::select_by_column(&mut rb,"id_card","2800000000").await.expect("select failed");
+    assert_eq!(selected.len(),1);
+
+    //remove new student
+    Student::delete_by_column(&mut rb,"id_card","2800000000").await.expect("delete failed");
 
 }
