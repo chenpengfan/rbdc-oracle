@@ -1,64 +1,88 @@
 use std::str::FromStr;
 
 use bigdecimal::BigDecimal;
-use oracle::sql_type::ToSql;
+use oracle::Statement;
 use rbdc::Error;
 use rbs::Value;
 
 pub trait Encode {
-    fn encode(self, vec: & mut Vec<Box<dyn ToSql>>,) -> Result<(), Error>;
+    fn encode(self, idx: usize, statement: &mut Statement) -> Result<(), Error>;
 }
 
 impl Encode for Value {
-    fn encode(self, vec: & mut Vec<Box<dyn ToSql>>) -> Result<(), Error> {
-        match self{
+    fn encode(self, idx: usize, statement: &mut Statement) -> Result<(), Error> {
+        let idx = idx + 1;//oracle is one-based
+        match self {
             Value::Ext(t, v) => match t {
                 "Date" => {
                     let s = v.as_str().unwrap_or_default();
-                    let d = chrono::NaiveDate::parse_from_str(s,"%Y-%m-%d").unwrap();
-                    vec.push(Box::new(d));
-                },
+                    let d = chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").unwrap();
+                    statement.bind(idx, &d).map_err(|e| e.to_string())?
+                }
                 "DateTime" => {
                     let s = v.as_str().unwrap_or_default();
-                    let d = chrono::NaiveDateTime::parse_from_str(s,"%Y-%m-%d %H:%M:%S").unwrap();
-                    vec.push(Box::new(d));
+                    let d = chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S").unwrap();
+                    statement.bind(idx, &d).map_err(|e| e.to_string())?
                 }
                 "Time" => {
                     //TODO: need to fix this
                     let s = v.into_string().unwrap();
-                    vec.push(Box::new(s));
+                    statement.bind(idx, &s).map_err(|e| e.to_string())?
                 }
                 "Decimal" => {
                     let d = BigDecimal::from_str(&v.into_string().unwrap_or_default()).unwrap().to_string();
-                    vec.push(Box::new(d));
+                    statement.bind(idx, &d).map_err(|e| e.to_string())?
                 }
                 "Json" => {
                     return Err(Error::from("unimpl"));
                 }
                 "Timestamp" => {
                     let t = v.as_u64().unwrap_or_default() as i64;
-                    vec.push(Box::new(t));
+                    statement.bind(idx, &t).map_err(|e| e.to_string())?
                 }
                 "Uuid" => {
                     let d = v.into_string().unwrap();
-                    vec.push(Box::new(d));
+                    statement.bind(idx, &d).map_err(|e| e.to_string())?
                 }
                 _ => {
                     return Err(Error::from("unimpl"));
-                },
+                }
             }
-            Value::String(str)=>{
-                vec.push(Box::new(str));
+            Value::String(str) => {
+                statement.bind(idx, &str).map_err(|e| e.to_string())?
             }
-            Value::I32(int)=>{
-                vec.push(Box::new(int));
+            Value::U32(u) => {
+                statement.bind(idx, &u).map_err(|e| e.to_string())?
             }
-            Value::I64(int)=>{
-                vec.push(Box::new(int));
+            Value::U64(u) => {
+                statement.bind(idx, &u).map_err(|e| e.to_string())?
+            }
+            Value::I32(int) => {
+                statement.bind(idx, &int).map_err(|e| e.to_string())?
+            }
+            Value::I64(long) => {
+                statement.bind(idx, &long).map_err(|e| e.to_string())?
+            }
+            Value::F32(float) => {
+                statement.bind(idx, &float).map_err(|e| e.to_string())?
+            }
+            Value::F64(double) => {
+                statement.bind(idx, &double).map_err(|e| e.to_string())?
+            }
+            Value::Binary(bin) => {
+                statement.bind(idx, &bin).map_err(|e| e.to_string())?
+            }
+            Value::Array(bin) => {
+                //add suupport for Vec<u8>
+                let x1:Vec<u8> = bin.into_iter().map(|x|(x.as_u64().unwrap())as u8).collect();
+                statement.bind(idx, &x1).map_err(|e| e.to_string())?
+            }
+            Value::Null => {
+                statement.bind(idx, &Option::<String>::None).unwrap();
             }
             //TODO: more types!
-            _=>{
-                vec.push(Box::new(self.to_string()));
+            _ => {
+                statement.bind(idx, &self.to_string()).map_err(|e| e.to_string())?
             }
         }
         Ok(())

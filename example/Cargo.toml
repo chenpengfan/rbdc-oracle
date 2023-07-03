@@ -1,14 +1,14 @@
 [package]
 name = "example"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2021"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-rbs = "4.3"
-rbdc = { version = "4.3", default-features = false }
+rbs = "4.3.2"
+rbdc = { version = "4.3.10", default-features = false }
 rbdc-oracle={path="../"}
-rbatis = { version = "4.0.58" , features=["debug_mode"] }
+rbatis = { version = "4.3.10" , features=["debug_mode"] }
 serde_json = "1"
 fastdate = { version = "0.1"}
 bigdecimal = { version = "0.2.0", features = ["serde"] }

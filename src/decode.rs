@@ -12,14 +12,13 @@ pub trait Decode {
 
 impl Decode for Value {
     fn decode(row: &OracleData) -> Result<Value, Error> {
-        let s = row.str.as_ref();
-        if s.is_none() {
+        if row.is_sql_null {
             return Ok(Value::Null);
         }
-        let value = s.unwrap().clone();
         match row.column_type {
             OracleType::Number(p, s) => {
-                if p ==0 && s == -127{
+                let value = row.str.as_ref().unwrap().clone();
+                if p == 0 && s == -127 {
                     // it means number(*)
                     let dec =
                         BigDecimal::from_str(&value).map_err(|e| Error::from(e.to_string()))?;
@@ -52,19 +51,40 @@ impl Decode for Value {
             }
             //OracleType::Int64 is integer
             OracleType::Int64 => {
-                let a = value.parse::<i32>()?;
+                let a = row.str.as_ref().unwrap().clone().parse::<i32>()?;
                 return Ok(Value::I32(a));
             }
             OracleType::Long => {
-                let a = value.parse::<i64>()?;
+                let a = row.str.as_ref().unwrap().clone().parse::<i64>()?;
                 return Ok(Value::I64(a));
             }
+            OracleType::Float(p) => {
+                return if p >= 24 {
+                    let a = row.str.as_ref().unwrap().clone().parse::<f64>()?;
+                    Ok(Value::F64(a))
+                } else {
+                    let a = row.str.as_ref().unwrap().clone().parse::<f32>()?;
+                    Ok(Value::F32(a))
+                }
+            }
             OracleType::Date => {
-                let a = DateTime::from_str(&value)?;
+                let a = DateTime::from_str(&row.str.as_ref().unwrap().clone())?;
                 return Ok(Value::from(a));
             }
+            OracleType::BLOB => {
+                let v :Vec<Value> = row.bin.as_ref().unwrap().iter().map(|x|Value::U64(*x as u64)).collect();
+                return Ok(Value::Array(v));
+            }
+            OracleType::CLOB => {
+                return Ok(Value::String(row.str.as_ref().unwrap().clone()))
+            }
             //TODO: more types!
-            _ => return Ok(Value::String(value)),
+            _ => {
+                if row.str.as_ref().is_some() {
+                    return Ok(Value::String(row.str.as_ref().unwrap().clone()))
+                }
+                return Err( Error::from("unimpl"));
+            },
         };
     }
 }

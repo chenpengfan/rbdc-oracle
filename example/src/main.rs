@@ -1,14 +1,16 @@
-use bigdecimal::BigDecimal;
-use rbatis::{Rbatis, py_sql};
-use rbdc::{datetime::DateTime};
-use rbdc_oracle::driver::OracleDriver;
-use rbdc_oracle::options::OracleConnectOptions;
-use serde::{Serialize, Deserialize};
-use std::str::FromStr;
-
 #[macro_use]
 extern crate rbatis;
 extern crate rbdc;
+
+use std::str::FromStr;
+
+use bigdecimal::BigDecimal;
+use rbatis::{py_sql, RBatis};
+use rbdc::datetime::DateTime;
+use rbdc_oracle::driver::OracleDriver;
+use rbdc_oracle::options::OracleConnectOptions;
+use serde::{Deserialize, Serialize};
+
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Student{
@@ -22,15 +24,28 @@ pub struct Student{
 crud!(Student{},"t_student");
 
 #[py_sql("select name,age,birthday,sex,id_card,score,id_card from t_student where sex = #{sex} ")]
-async fn simple_py_sql_select(rb: &Rbatis,sex:i32) -> Vec<Student> {}
+async fn simple_py_sql_select(rb: &RBatis,sex:i32) -> Vec<Student> {}
 
 #[sql("select name,age,birthday,sex,id_card,score,id_card from t_student where sex = ? ")]
-async fn simple_sql_select(rb: &Rbatis,sex:i32) -> Vec<Student> {}
+async fn simple_sql_select(rb: &RBatis,sex:i32) -> Vec<Student> {}
+
+impl_delete!(Student{delete_all() => "`where id_card > 0"},"t_student");
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct StudentProfile{
+    pub id_card : i64,
+    pub photo: Option<Vec<u8>>,
+    pub resume : Option<String>
+}
+crud!(StudentProfile{},"t_student_profile");
+
+#[sql("select * from t_student_profile where rownum = 1")]
+async fn select_first_profile(rb: &RBatis) -> Option<StudentProfile> {}
 
 #[tokio::main]
 async fn main() {
     fast_log::init(fast_log::Config::new().console()).expect("");
-    let mut rb = Rbatis::new();
+    let mut rb = RBatis::new();
     rb.init_opt(
         OracleDriver {},
         OracleConnectOptions {
@@ -41,14 +56,54 @@ async fn main() {
     )
     .expect("rbatis link database fail");
 
+
     //execute init.sql before
 
+    //remode old data
+    let deleted =Student::delete_all(&mut rb).await.expect("delete failed");
+    println!("{}",deleted.rows_affected);
+
+    //insert some data
+    let students = vec![Student{
+        id_card : 2300000000,
+        name : "小张".to_string(),
+        score : BigDecimal::from_str("99.5").unwrap(),
+        birthday : Some(DateTime::from_str("2022-09-01 10:33:07").unwrap()),
+        sex : 2,
+        age: Some(20)
+    },Student{
+        id_card : 2500000000,
+        name : "小强".to_string(),
+        score : BigDecimal::from_str("85.5").unwrap(),
+        birthday : Some(DateTime::from_str("2002-09-01 16:03:20").unwrap()),
+        sex : 1,
+        age: Some(20)
+    },Student{
+        id_card : 2400000000,
+        name : "小明".to_string(),
+        score : BigDecimal::from_str("91.2").unwrap(),
+        birthday : Some(DateTime::from_str("2002-09-01 12:02:49").unwrap()),
+        sex : 1,
+        age: Some(20)
+    },Student{
+        id_card : 2200000000,
+        name : "小红".to_string(),
+        score : BigDecimal::from_str("65.5").unwrap(),
+        birthday : Some(DateTime::from_str("2002-09-01 14:03:20").unwrap()),
+        sex : 2,
+        age: Some(20)
+    }];
+    //Student::insert_batch(&mut rb,&students) not works
+    Student::insert(&mut rb,&students[0]).await.expect("insert failed");
+    Student::insert(&mut rb,&students[1]).await.expect("insert failed");
+    Student::insert(&mut rb,&students[2]).await.expect("insert failed");
+    Student::insert(&mut rb,&students[3]).await.expect("insert failed");
 
     //sql select
     let select_result = simple_sql_select(&rb,2).await.expect("query failed");
     assert_eq!(select_result.len(),2);
     println!("{:?}",select_result);
-    
+
     //py_sql select
     let select_result = simple_py_sql_select(&rb,2).await.expect("query failed");
     assert_eq!(select_result.len(),2);
@@ -124,4 +179,53 @@ async fn main() {
     //remove new student
     Student::delete_by_column(&mut rb,"id_card","2800000000").await.expect("delete failed");
 
+
+    //lob test 1: insert empty lob
+    let stu_profile = StudentProfile{
+        id_card : 2500000000,
+        photo: None,
+        resume: None
+    };
+    let insert_result = StudentProfile::insert(&mut rb,&stu_profile).await.expect("insert failed");
+    assert_eq!(insert_result.rows_affected,1);
+
+    //query from database
+    let inserted : Option<StudentProfile> =
+        select_first_profile(&mut rb)
+            .await.expect("select failed");
+    assert!(inserted.is_some());
+    let se = inserted.unwrap();
+    assert!(se.clone().resume.is_none());
+    assert!(se.clone().photo.is_none());
+
+    //remove
+    let delete_result = StudentProfile::delete_by_column(&mut rb,"id_card","2500000000")
+        .await.expect("delete failed");
+    assert_eq!(delete_result.rows_affected,1);
+
+
+    //lob test 2: insert big data
+    let long_text = "abc".repeat(999_999);
+    let long_binary = "def".repeat(999_999).as_bytes().to_vec();
+    let stu_profile = StudentProfile{
+        id_card : 2300000000,
+        photo: Some(long_binary.clone()),
+        resume: Some(long_text.clone())
+    };
+    let insert_result = StudentProfile::insert(&mut rb,&stu_profile).await.expect("insert failed");
+    assert_eq!(insert_result.rows_affected,1);
+
+    //query from database
+    let inserted : Option<StudentProfile> =
+        select_first_profile(&mut rb)
+            .await.expect("select failed");
+    assert!(inserted.is_some());
+    let se = inserted.unwrap();
+    assert_eq!(se.clone().resume.unwrap(), long_text);
+    assert_eq!(se.clone().photo.unwrap(), long_binary);
+
+    //remove
+    let delete_result = StudentProfile::delete_by_column(&mut rb,"id_card","2300000000")
+        .await.expect("delete failed");
+    assert_eq!(delete_result.rows_affected,1);
 }

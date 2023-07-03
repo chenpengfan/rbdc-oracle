@@ -10,10 +10,10 @@ pub mod encode;
 pub mod options;
 pub mod connection;
 
-#[derive(Debug,Clone)]
-pub struct OracleColumn{
-    pub name:String,
-    pub column_type:OracleType
+#[derive(Debug, Clone)]
+pub struct OracleColumn {
+    pub name: String,
+    pub column_type: OracleType,
 }
 
 #[derive(Debug)]
@@ -34,10 +34,13 @@ impl MetaData for OracleMetaData {
 }
 
 #[derive(Debug)]
-pub struct OracleData{
-    pub str:Option<String>,
-    pub column_type:OracleType
+pub struct OracleData {
+    pub str: Option<String>,
+    pub bin: Option<Vec<u8>>,
+    pub column_type: OracleType,
+    pub is_sql_null: bool,
 }
+
 
 #[derive(Debug)]
 pub struct OracleRow {
