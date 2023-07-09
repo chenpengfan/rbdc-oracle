@@ -72,11 +72,6 @@ impl Encode for Value {
             Value::Binary(bin) => {
                 statement.bind(idx, &bin).map_err(|e| e.to_string())?
             }
-            Value::Array(bin) => {
-                //add suupport for Vec<u8>
-                let x1:Vec<u8> = bin.into_iter().map(|x|(x.as_u64().unwrap())as u8).collect();
-                statement.bind(idx, &x1).map_err(|e| e.to_string())?
-            }
             Value::Null => {
                 statement.bind(idx, &Option::<String>::None).unwrap();
             }

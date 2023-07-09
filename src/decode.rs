@@ -72,8 +72,10 @@ impl Decode for Value {
                 return Ok(Value::from(a));
             }
             OracleType::BLOB => {
-                let v :Vec<Value> = row.bin.as_ref().unwrap().iter().map(|x|Value::U64(*x as u64)).collect();
-                return Ok(Value::Array(v));
+                if let Some(a) = &row.bin{
+                    return Ok(Value::Binary(a.clone()));
+                }
+                return Ok(Value::Null);
             }
             OracleType::CLOB => {
                 return Ok(Value::String(row.str.as_ref().unwrap().clone()))
