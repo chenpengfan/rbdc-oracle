@@ -11,7 +11,6 @@ use rbdc_oracle::driver::OracleDriver;
 use rbdc_oracle::options::OracleConnectOptions;
 use serde::{Deserialize, Serialize};
 
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Student{
     pub id_card : i64,
@@ -34,7 +33,7 @@ impl_delete!(Student{delete_all() => "`where id_card > 0"},"t_student");
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct StudentProfile{
     pub id_card : i64,
-    pub photo: Option<Vec<u8>>,
+    pub photo: Option<rbdc::bytes::Bytes>,
     pub resume : Option<String>
 }
 crud!(StudentProfile{},"t_student_profile");
@@ -209,7 +208,7 @@ async fn main() {
     let long_binary = "def".repeat(999_999).as_bytes().to_vec();
     let stu_profile = StudentProfile{
         id_card : 2300000000,
-        photo: Some(long_binary.clone()),
+        photo: Some(rbdc::bytes::Bytes::from(long_binary.clone())),
         resume: Some(long_text.clone())
     };
     let insert_result = StudentProfile::insert(&mut rb,&stu_profile).await.expect("insert failed");
@@ -222,7 +221,7 @@ async fn main() {
     assert!(inserted.is_some());
     let se = inserted.unwrap();
     assert_eq!(se.clone().resume.unwrap(), long_text);
-    assert_eq!(se.clone().photo.unwrap(), long_binary);
+    assert_eq!(se.clone().photo.unwrap().into_vec(), long_binary);
 
     //remove
     let delete_result = StudentProfile::delete_by_column(&mut rb,"id_card","2300000000")
