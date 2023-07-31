@@ -143,13 +143,25 @@ impl Connection for OracleConnection {
                 stmt
                     .execute(&[])
                     .map_err(|e| Error::from(e.to_string()))?;
-                let rows_affected = stmt.row_count().map_err(|e| Error::from(e.to_string()))?;
                 if !(self.is_trans) {
                     self.conn.commit().map_err(|e| Error::from(e.to_string()))?;
                 }
+                let rows_affected = stmt.row_count().map_err(|e| Error::from(e.to_string()))?;
+                let mut ret = vec![];
+                for i in 1..=stmt.bind_count(){
+                    let res:Result<String,_> = stmt.bind_value(i);
+                    match res {
+                        Ok(v)=>{
+                            ret.push(Value::String(v))
+                        },
+                        Err(_)=>{
+                            ret.push(Value::Null)
+                        }
+                    }
+                }
                 Ok(ExecResult {
                     rows_affected,
-                    last_insert_id: Value::Null,
+                    last_insert_id: Value::Array(ret),
                 })
             })
         }

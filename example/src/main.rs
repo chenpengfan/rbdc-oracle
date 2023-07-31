@@ -9,6 +9,7 @@ use rbatis::{py_sql, RBatis};
 use rbdc::datetime::DateTime;
 use rbdc_oracle::driver::OracleDriver;
 use rbdc_oracle::options::OracleConnectOptions;
+use rbs::Value;
 use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -38,6 +39,8 @@ pub struct StudentProfile{
 }
 crud!(StudentProfile{},"t_student_profile");
 
+impl_delete!(StudentProfile{delete_all() => "`where id_card > 0"},"t_student_profile");
+
 #[sql("select * from t_student_profile where rownum = 1")]
 async fn select_first_profile(rb: &RBatis) -> Option<StudentProfile> {}
 
@@ -59,6 +62,8 @@ async fn main() {
     //execute init.sql before
 
     //remode old data
+    let deleted =StudentProfile::delete_all(&mut rb).await.expect("delete failed");
+    println!("{}",deleted.rows_affected);
     let deleted =Student::delete_all(&mut rb).await.expect("delete failed");
     println!("{}",deleted.rows_affected);
 
@@ -223,8 +228,17 @@ async fn main() {
     assert_eq!(se.clone().resume.unwrap(), long_text);
     assert_eq!(se.clone().photo.unwrap().into_vec(), long_binary);
 
-    //remove
-    let delete_result = StudentProfile::delete_by_column(&mut rb,"id_card","2300000000")
-        .await.expect("delete failed");
-    assert_eq!(delete_result.rows_affected,1);
+    //procedure test
+    rb.exec("create or replace procedure my_proc(val in nvarchar2,c out number) as \n begin \n select count(*) into c from T_STUDENT where NAME like val; \n end;",vec![]).await.unwrap();
+    //use "last_insert_id" to receive the params
+    let procedure_res = rb.exec("begin\nmy_proc(:name,:val);\nend;",vec![Value::String("小张".to_string()),Value::I32(0)]).await.unwrap();
+    assert_eq!(procedure_res.last_insert_id.as_array().unwrap()[1],Value::String("1".to_string()));
+
+    //procedure+function test
+    rb.exec("create or replace function my_func(val in nvarchar2) return number \n as c number; \n begin \n select count(*) into c from T_STUDENT where NAME like val; \n return c; \n end;",vec![]).await.unwrap();
+    //use "last_insert_id" to receive the params
+    let res = rb.exec("begin \n :ret := my_func(:name); \n end;",vec![Value::I32(0),Value::String("小张".to_string())]).await.unwrap();
+    assert_eq!(res.last_insert_id.as_array().unwrap()[0],Value::String("1".to_string()));
+
 }
+

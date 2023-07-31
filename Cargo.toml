@@ -1,6 +1,6 @@
 [package]
 name = "rbdc-oracle"
-version = "0.3.1"
+version = "0.4.0"
 edition = "2021"
 description = "a simple oracle driver for rbatis"
 readme = "Readme.md"
