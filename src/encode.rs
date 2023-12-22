@@ -21,7 +21,7 @@ impl Encode for Value {
                 }
                 "DateTime" => {
                     let s = v.as_str().unwrap_or_default();
-                    let d = chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%d %H:%M:%S").unwrap();
+                    let d = chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%dT%H:%M:%S%z").unwrap();
                     statement.bind(idx, &d).map_err(|e| e.to_string())?
                 }
                 "Time" => {

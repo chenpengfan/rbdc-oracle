@@ -48,7 +48,7 @@ async fn select_first_profile(rb: &RBatis) -> Option<StudentProfile> {}
 async fn main() {
     fast_log::init(fast_log::Config::new().console()).expect("");
     let mut rb = RBatis::new();
-    rb.init_opt(
+    rb.init_option::<OracleDriver,OracleConnectOptions,rbdc_pool_mobc::MobcPool>(
         OracleDriver {},
         OracleConnectOptions {
             username: "user".to_string(), 

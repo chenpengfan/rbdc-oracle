@@ -2,7 +2,6 @@ use futures_core::future::BoxFuture;
 use rbdc::db::{ConnectOptions, Connection};
 use rbdc::Error;
 use serde::{Deserialize, Serialize};
-use std::any::Any;
 
 use crate::connection::OracleConnection;
 
@@ -26,10 +25,6 @@ impl ConnectOptions for OracleConnectOptions {
     fn set_uri(&mut self, url: &str) -> Result<(), Error> {
         *self = OracleConnectOptions::from_str(url)?;
         Ok(())
-    }
-
-    fn uppercase_self(&self) -> &(dyn Any + Send + Sync) {
-        self
     }
 }
 

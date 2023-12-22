@@ -1,17 +1,18 @@
 [package]
 name = "example"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-rbs = "4.3.2"
-rbdc = { version = "4.3.10", default-features = false }
+rbs = "4.5.2"
+rbdc = { version = "4.5.12", default-features = false }
 rbdc-oracle={path="../"}
-rbatis = { version = "4.3.10" , features=["debug_mode"] }
+rbatis = { version = "4.5.6" , features=["debug_mode"] }
+rbdc-pool-mobc = "4.5.6"
 serde_json = "1"
-fastdate = { version = "0.1"}
-bigdecimal = { version = "0.2.0", features = ["serde"] }
+fastdate = { version = "0.3" }
+bigdecimal = { version = "0.4", features = ["serde"] }
 log = "0.4.2"
 fast_log = "1.5"
 tokio = { version = "1.12", features = ["full"] }
