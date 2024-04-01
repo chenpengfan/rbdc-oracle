@@ -54,10 +54,6 @@ impl Decode for Value {
                 let a = row.str.as_ref().unwrap().clone().parse::<i32>()?;
                 return Ok(Value::I32(a));
             }
-            OracleType::Long => {
-                let a = row.str.as_ref().unwrap().clone().parse::<i64>()?;
-                return Ok(Value::I64(a));
-            }
             OracleType::Float(p) => {
                 return if p >= 24 {
                     let a = row.str.as_ref().unwrap().clone().parse::<f64>()?;
@@ -77,7 +73,13 @@ impl Decode for Value {
                 }
                 return Ok(Value::Null);
             }
+            OracleType::Long => {
+                return Ok(Value::String(row.str.as_ref().unwrap().clone()))
+            }
             OracleType::CLOB => {
+                return Ok(Value::String(row.str.as_ref().unwrap().clone()))
+            }
+            OracleType::NCLOB => {
                 return Ok(Value::String(row.str.as_ref().unwrap().clone()))
             }
             //TODO: more types!
