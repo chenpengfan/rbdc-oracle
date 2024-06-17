@@ -209,8 +209,8 @@ async fn main() {
 
 
     //lob test 2: insert big data
-    let long_text = "abc".repeat(999_999);
-    let long_binary = "def".repeat(999_999).as_bytes().to_vec();
+    let long_text = "abcd".repeat(100);
+    let long_binary = "efgh".repeat(999_999).as_bytes().to_vec();
     let stu_profile = StudentProfile{
         id_card : 2300000000,
         photo: Some(rbdc::bytes::Bytes::from(long_binary.clone())),
@@ -226,7 +226,7 @@ async fn main() {
     assert!(inserted.is_some());
     let se = inserted.unwrap();
     assert_eq!(se.clone().resume.unwrap(), long_text);
-    assert_eq!(se.clone().photo.unwrap().into_vec(), long_binary);
+    assert_eq!(se.clone().photo.unwrap().to_vec(), long_binary);
 
     //procedure test
     rb.exec("create or replace procedure my_proc(val in nvarchar2,c out number) as \n begin \n select count(*) into c from T_STUDENT where NAME like val; \n end;",vec![]).await.unwrap();

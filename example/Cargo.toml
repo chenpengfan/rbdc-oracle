@@ -5,11 +5,12 @@ edition = "2021"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
-rbs = "4.5.2"
-rbdc = { version = "4.5.12", default-features = false }
+rbs = "4.5.13"
+rbdc = { version = "4.5.33", default-features = false }
 rbdc-oracle={path="../"}
-rbatis = { version = "4.5.6" , features=["debug_mode"] }
-rbdc-pool-mobc = "4.5.6"
+rbatis = { version = "4.5.24" , features=["debug_mode"] }
+rbdc-pool-mobc = "4.5.7"
+dark-std="0.2.15"
 serde_json = "1"
 fastdate = { version = "0.3" }
 bigdecimal = { version = "0.4", features = ["serde"] }
