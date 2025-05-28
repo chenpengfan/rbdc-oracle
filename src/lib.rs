@@ -12,7 +12,7 @@ pub mod connection;
 
 #[derive(Debug, Clone)]
 pub struct OracleColumn {
-    pub name: String,
+    pub name: Arc<str>,
     pub column_type: OracleType,
 }
 
@@ -35,8 +35,8 @@ impl MetaData for OracleMetaData {
 
 #[derive(Debug)]
 pub struct OracleData {
-    pub str: Option<String>,
-    pub bin: Option<Vec<u8>>,
+    pub str: Option<Arc<str>>,
+    pub bin: Option<Arc<[u8]>>,
     pub column_type: OracleType,
     pub is_sql_null: bool,
 }
@@ -55,8 +55,16 @@ impl Row for OracleRow {
     }
 
     fn get(&mut self, i: usize) -> Result<Value, rbdc::Error> {
-        Value::decode(
-            &self.datas[i],
-        )
+        self.get_safe(i)
+    }
+}
+
+impl OracleRow {
+    #[inline]
+    pub fn get_safe(&self, i: usize) -> Result<Value, rbdc::Error> {
+        self.datas
+            .get(i)
+            .ok_or_else(|| rbdc::Error::from("Index out of bounds"))
+            .and_then(|data| Value::decode(data))
     }
 }

@@ -13,9 +13,38 @@ impl Driver for OracleDriver {
         "oracle"
     }
 
-    fn connect(&self, _url: &str) -> BoxFuture<Result<Box<dyn Connection>, Error>> {
+    fn connect(&self, url: &str) -> BoxFuture<Result<Box<dyn Connection>, Error>> {
+        let url = url.to_string();
+
         Box::pin(async move {
-            unimplemented!();
+            let parsed_url =
+                url::Url::parse(&url).map_err(|e| Error::from(format!("Invalid URL: {}", e)))?;
+
+            if parsed_url.scheme() != "oracle" {
+                return Err(Error::from("URL scheme must be 'oracle'"));
+            }
+
+            let username = parsed_url.username().to_string();
+            let password = parsed_url
+                .password()
+                .ok_or_else(|| Error::from("Password is required"))?
+                .to_string();
+
+            let host = parsed_url
+                .host_str()
+                .ok_or_else(|| Error::from("Host is required"))?;
+            let port = parsed_url.port().unwrap_or(1521);
+            let service = parsed_url.path().trim_start_matches('/');
+
+            let connect_string = if service.is_empty() {
+                format!("//{}:{}", host, port)
+            } else {
+                format!("//{}:{}/{}", host, port, service)
+            };
+            
+            let opt = OracleConnectOptions { username: username, password: password, connect_string: connect_string };
+            let conn = OracleConnection::establish(&opt).await?;
+            Ok(Box::new(conn) as Box<dyn Connection>)
         })
     }
 
@@ -23,9 +52,12 @@ impl Driver for OracleDriver {
         &'a self,
         opt: &'a dyn ConnectOptions,
     ) -> BoxFuture<Result<Box<dyn Connection>, Error>> {
-        let opt = opt.downcast_ref::<OracleConnectOptions>().unwrap();
+        let opt = match opt.downcast_ref::<OracleConnectOptions>() {
+            Some(oracle_opt) => oracle_opt.clone(),
+            None => return Box::pin(async { Err(Error::from("Invalid connection options type")) }),
+        };
         Box::pin(async move {
-            let conn = OracleConnection::establish(opt).await?;
+            let conn = OracleConnection::establish(&opt).await?;
             Ok(Box::new(conn) as Box<dyn Connection>)
         })
     }

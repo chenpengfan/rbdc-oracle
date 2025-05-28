@@ -41,7 +41,7 @@ impl Connection for OracleConnection {
             let mut columns = Vec::with_capacity(col_count);
             for info in col_infos.iter() {
                 columns.push(OracleColumn {
-                    name: info.name().to_string().to_lowercase(),
+                    name: info.name().to_lowercase().into(),
                     column_type: info.oracle_type().clone(),
                 })
             }
@@ -63,7 +63,7 @@ impl Connection for OracleConnection {
                             match col.get::<Vec<u8>>() {
                                 Ok(bin) => datas.push(OracleData {
                                     str: None,
-                                    bin: Some(bin),
+                                    bin: Some(bin.into()),
                                     column_type: t.clone(),
                                     is_sql_null: false,
                                 }),
@@ -77,7 +77,7 @@ impl Connection for OracleConnection {
                         } else {
                             match col.get::<String>() {
                                 Ok(str) => datas.push(OracleData {
-                                    str: Some(str),
+                                    str: Some(str.into()),
                                     bin: None,
                                     column_type: t.clone(),
                                     is_sql_null: false,
@@ -200,11 +200,21 @@ impl Connection for OracleConnection {
 
 impl OracleConnection {
     pub async fn establish(opt: &OracleConnectOptions) -> Result<Self, Error> {
-        let conn = OraConnect::connect(opt.username.clone(), opt.password.clone(), opt.connect_string.clone())
-            .map_err(|e| Error::from(e.to_string()))?;
-        Ok(Self {
-            conn: Arc::new(conn),
-            is_trans: Arc::new(Mutex::new(false)),
-        })
+        let task = tokio::task::spawn_blocking({
+            let opt = opt.clone();
+            move || {
+                let conn = OraConnect::connect(
+                    opt.username,
+                    opt.password,
+                    opt.connect_string,
+                ).map_err(|e| Error::from(e.to_string()))?;
+
+                Ok(OracleConnection {
+                    conn: Arc::new(conn),
+                    is_trans: Arc::new(Mutex::new(false)),
+                })
+            }
+        });
+        task.await.map_err(|_| Error::from("establish error"))?
     }
 }

@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::connection::OracleConnection;
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct OracleConnectOptions {
     pub username: String,
     pub password: String,
@@ -15,9 +15,7 @@ pub struct OracleConnectOptions {
 impl ConnectOptions for OracleConnectOptions {
     fn connect(&self) -> BoxFuture<Result<Box<dyn Connection>, Error>> {
         Box::pin(async move {
-            let v = OracleConnection::establish(self)
-                .await
-                .map_err(|e| Error::from(e.to_string()))?;
+            let v = OracleConnection::establish(self).await?;
             Ok(Box::new(v) as Box<dyn Connection>)
         })
     }
