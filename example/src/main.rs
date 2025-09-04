@@ -32,6 +32,9 @@ async fn simple_sql_select(rb: &RBatis, sex: i32) -> Vec<Student> {}
 #[html_sql("example.html")]
 async fn select_by_condition(rb: &RBatis,name: Option<String>, age: i32) -> Vec<Student> {}
 
+#[html_sql("example.html")]
+async fn insert_batch(rb: &RBatis,students: &Vec<Student>) -> Result<rbdc::db::ExecResult, rbdc::Error> {}
+
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct StudentProfile {
     pub id_card: i64,
@@ -112,19 +115,11 @@ async fn main() {
             age: Some(20),
         },
     ];
-    //Student::insert_batch(&mut rb,&students) not works
-    Student::insert(&mut rb, &students[0])
-        .await
-        .expect("insert failed");
-    Student::insert(&mut rb, &students[1])
-        .await
-        .expect("insert failed");
-    Student::insert(&mut rb, &students[2])
-        .await
-        .expect("insert failed");
-    Student::insert(&mut rb, &students[3])
-        .await
-        .expect("insert failed");
+
+    //Student::insert_batch(&mut rb,&students) not works in Oracle use html insert instead
+    //html batch insert
+    insert_batch(&mut rb,&students).await
+    .expect("batch insert failed");
 
     //sql select
     let select_result = simple_sql_select(&rb, 2).await.expect("query failed");

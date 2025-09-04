@@ -10,4 +10,11 @@
             ` and age = #{age}`
         </where>
     </select>
+    <insert id="insert_batch">
+        `insert all `
+        <foreach collection="students" item="student" open=" " close=" " separator=" ">
+            `into t_student (id_card, name, score, birthday, sex, age) values (#{student.id_card}, #{student.name}, #{student.score}, #{student.birthday}, #{student.sex}, #{student.age})`
+        </foreach>
+        `select 1 from dual`
+    </insert>
 </mapper>
