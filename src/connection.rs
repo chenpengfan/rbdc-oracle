@@ -23,7 +23,7 @@ impl Connection for OracleConnection {
         &mut self,
         sql: &str,
         params: Vec<Value>,
-    ) -> BoxFuture<Result<Vec<Box<dyn Row>>, Error>> {
+    ) -> BoxFuture<'_, Result<Vec<Box<dyn Row>>, Error>> {
         let sql: String = OracleDriver {}.pub_exchange(sql);
         let oc = self.clone();
         let task = tokio::task::spawn_blocking(move || {
@@ -109,7 +109,7 @@ impl Connection for OracleConnection {
         &mut self,
         sql: &str,
         params: Vec<Value>,
-    ) -> BoxFuture<Result<ExecResult, Error>> {
+    ) -> BoxFuture<'_, Result<ExecResult, Error>> {
         let oc = self.clone();
         let sql = sql.to_string();
         let task = tokio::task::spawn_blocking(move || {
@@ -173,7 +173,7 @@ impl Connection for OracleConnection {
         })
     }
 
-    fn ping(&mut self) -> BoxFuture<Result<(), rbdc::Error>> {
+    fn ping(&mut self) -> BoxFuture<'_, Result<(), rbdc::Error>> {
         let oc = self.clone();
         let task = tokio::task::spawn_blocking(move || {
             oc.conn.ping()
@@ -185,7 +185,7 @@ impl Connection for OracleConnection {
         })
     }
 
-    fn close(&mut self) -> BoxFuture<Result<(), rbdc::Error>> {
+    fn close(&mut self) -> BoxFuture<'_, Result<(), rbdc::Error>> {
         let oc = self.clone();
         let task = tokio::task::spawn_blocking(move || {
             oc.conn.commit().map_err(|e| Error::from(e.to_string()))?;

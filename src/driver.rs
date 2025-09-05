@@ -13,7 +13,7 @@ impl Driver for OracleDriver {
         "oracle"
     }
 
-    fn connect(&self, url: &str) -> BoxFuture<Result<Box<dyn Connection>, Error>> {
+    fn connect(&self, url: &str) -> BoxFuture<'_, Result<Box<dyn Connection>, Error>> {
         let url = url.to_string();
 
         Box::pin(async move {
@@ -51,7 +51,7 @@ impl Driver for OracleDriver {
     fn connect_opt<'a>(
         &'a self,
         opt: &'a dyn ConnectOptions,
-    ) -> BoxFuture<Result<Box<dyn Connection>, Error>> {
+    ) -> BoxFuture<'a, Result<Box<dyn Connection>, Error>> {
         let opt = match opt.downcast_ref::<OracleConnectOptions>() {
             Some(oracle_opt) => oracle_opt.clone(),
             None => return Box::pin(async { Err(Error::from("Invalid connection options type")) }),

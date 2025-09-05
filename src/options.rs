@@ -13,7 +13,7 @@ pub struct OracleConnectOptions {
 }
 
 impl ConnectOptions for OracleConnectOptions {
-    fn connect(&self) -> BoxFuture<Result<Box<dyn Connection>, Error>> {
+    fn connect(&self) -> BoxFuture<'_, Result<Box<dyn Connection>, Error>> {
         Box::pin(async move {
             let v = OracleConnection::establish(self).await?;
             Ok(Box::new(v) as Box<dyn Connection>)
