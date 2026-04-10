@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use bigdecimal::BigDecimal;
 use oracle::Statement;
-use rbdc::Error;
+use rbdc::{Error};
 use rbs::Value;
 
 pub trait Encode {
@@ -16,21 +16,21 @@ impl Encode for Value {
             Value::Ext(t, v) => match t {
                 "Date" => {
                     let s = v.as_str().unwrap_or_default();
-                    let d = chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").unwrap();
+                    let d = chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").map_err(|e| e.to_string())?;
                     statement.bind(idx, &d).map_err(|e| e.to_string())?
                 }
                 "DateTime" => {
                     let s = v.as_str().unwrap_or_default();
-                    let d = chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%dT%H:%M:%S%z").unwrap();
+                    let d = chrono::NaiveDateTime::parse_from_str(s, "%Y-%m-%dT%H:%M:%S%.f%z").map_err(|e| e.to_string())?;
                     statement.bind(idx, &d).map_err(|e| e.to_string())?
                 }
                 "Time" => {
-                    //TODO: need to fix this
+                    //use varchar or char
                     let s = v.into_string().unwrap();
                     statement.bind(idx, &s).map_err(|e| e.to_string())?
                 }
                 "Decimal" => {
-                    let d = BigDecimal::from_str(&v.into_string().unwrap_or_default()).unwrap().to_string();
+                    let d = BigDecimal::from_str(&v.into_string().unwrap_or_default()).map_err(|e| e.to_string())?.to_string();
                     statement.bind(idx, &d).map_err(|e| e.to_string())?
                 }
                 "Json" => {
