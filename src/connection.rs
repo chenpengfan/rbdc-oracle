@@ -1,16 +1,16 @@
 use std::sync::{Arc, Mutex};
 
 use futures_core::future::BoxFuture;
-use oracle::Connection as OraConnect;
 use oracle::sql_type::OracleType;
+use oracle::Connection as OraConnect;
 use rbdc::db::{Connection, ExecResult, Row};
 use rbdc::Error;
 use rbs::Value;
 
-use crate::{OracleColumn, OracleData, OracleRow};
 use crate::driver::OracleDriver;
 use crate::encode::Encode;
 use crate::options::OracleConnectOptions;
+use crate::{OracleColumn, OracleData, OracleRow};
 
 #[derive(Clone)]
 pub struct OracleConnection {
@@ -19,7 +19,7 @@ pub struct OracleConnection {
 }
 
 impl Connection for OracleConnection {
-    fn get_rows(
+    fn exec_rows(
         &mut self,
         sql: &str,
         params: Vec<Value>,
@@ -31,7 +31,8 @@ impl Connection for OracleConnection {
             let mut stmt = builder.build().map_err(|e| Error::from(e.to_string()))?;
 
             for (idx, x) in params.into_iter().enumerate() {
-                x.encode(idx, &mut stmt).map_err(|e| Error::from(e.to_string()))?
+                x.encode(idx, &mut stmt)
+                    .map_err(|e| Error::from(e.to_string()))?
             }
 
             let rows = stmt.query(&[]).map_err(|e| Error::from(e.to_string()))?;
@@ -100,21 +101,14 @@ impl Connection for OracleConnection {
             }
             Ok(results)
         });
-        Box::pin(async move {
-            task.await.map_err(|e| Error::from(e.to_string()))?
-        })
+        Box::pin(async move { task.await.map_err(|e| Error::from(e.to_string()))? })
     }
 
-    fn exec(
-        &mut self,
-        sql: &str,
-        params: Vec<Value>,
-    ) -> BoxFuture<'_, Result<ExecResult, Error>> {
+    fn exec(&mut self, sql: &str, params: Vec<Value>) -> BoxFuture<'_, Result<ExecResult, Error>> {
         let oc = self.clone();
         let sql = sql.to_string();
         let task = tokio::task::spawn_blocking(move || {
-            let mut trans = oc.is_trans.lock()
-                .map_err(|e| Error::from(e.to_string()))?;
+            let mut trans = oc.is_trans.lock().map_err(|e| Error::from(e.to_string()))?;
             if sql == "begin" {
                 *trans = true;
                 Ok(ExecResult {
@@ -140,11 +134,10 @@ impl Connection for OracleConnection {
                 let builder = oc.conn.statement(&sql);
                 let mut stmt = builder.build().map_err(|e| Error::from(e.to_string()))?;
                 for (idx, x) in params.into_iter().enumerate() {
-                    x.encode(idx, &mut stmt).map_err(|e| Error::from(e.to_string()))?
+                    x.encode(idx, &mut stmt)
+                        .map_err(|e| Error::from(e.to_string()))?
                 }
-                stmt
-                    .execute(&[])
-                    .map_err(|e| Error::from(e.to_string()))?;
+                stmt.execute(&[]).map_err(|e| Error::from(e.to_string()))?;
                 if !*trans {
                     oc.conn.commit().map_err(|e| Error::from(e.to_string()))?;
                     *trans = false;
@@ -154,12 +147,8 @@ impl Connection for OracleConnection {
                 for i in 1..=stmt.bind_count() {
                     let res: Result<String, _> = stmt.bind_value(i);
                     match res {
-                        Ok(v) => {
-                            ret.push(Value::String(v))
-                        }
-                        Err(_) => {
-                            ret.push(Value::Null)
-                        }
+                        Ok(v) => ret.push(Value::String(v)),
+                        Err(_) => ret.push(Value::Null),
                     }
                 }
                 Ok(ExecResult {
@@ -168,21 +157,16 @@ impl Connection for OracleConnection {
                 })
             }
         });
-        Box::pin(async {
-            task.await.map_err(|e| Error::from(e.to_string()))?
-        })
+        Box::pin(async { task.await.map_err(|e| Error::from(e.to_string()))? })
     }
 
     fn ping(&mut self) -> BoxFuture<'_, Result<(), rbdc::Error>> {
         let oc = self.clone();
         let task = tokio::task::spawn_blocking(move || {
-            oc.conn.ping()
-                .map_err(|e| Error::from(e.to_string()))?;
+            oc.conn.ping().map_err(|e| Error::from(e.to_string()))?;
             Ok(())
         });
-        Box::pin(async {
-            task.await.map_err(|e| Error::from(e.to_string()))?
-        })
+        Box::pin(async { task.await.map_err(|e| Error::from(e.to_string()))? })
     }
 
     fn close(&mut self) -> BoxFuture<'_, Result<(), rbdc::Error>> {
@@ -192,9 +176,7 @@ impl Connection for OracleConnection {
             oc.conn.close().map_err(|e| Error::from(e.to_string()))?;
             Ok(())
         });
-        Box::pin(async {
-            task.await.map_err(|e| Error::from(e.to_string()))?
-        })
+        Box::pin(async { task.await.map_err(|e| Error::from(e.to_string()))? })
     }
 }
 
@@ -203,11 +185,8 @@ impl OracleConnection {
         let task = tokio::task::spawn_blocking({
             let opt = opt.clone();
             move || {
-                let conn = OraConnect::connect(
-                    opt.username,
-                    opt.password,
-                    opt.connect_string,
-                ).map_err(|e| Error::from(e.to_string()))?;
+                let conn = OraConnect::connect(opt.username, opt.password, opt.connect_string)
+                    .map_err(|e| Error::from(e.to_string()))?;
 
                 Ok(OracleConnection {
                     conn: Arc::new(conn),
