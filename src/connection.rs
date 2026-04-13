@@ -19,7 +19,7 @@ pub struct OracleConnection {
 }
 
 impl Connection for OracleConnection {
-    fn get_rows(
+    fn exec_rows(
         &mut self,
         sql: &str,
         params: Vec<Value>,
