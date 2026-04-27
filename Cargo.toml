@@ -8,13 +8,26 @@ authors = ["chenpengfan<chenpengfan1996@gmail.com>"]
 license = "Apache-2.0"
 
 [dependencies]
-rbs = "4.7"
-rbdc = "4.8"
-oracle = { version="0.6", features = ["chrono"]}
+rbs = "4"
+rbdc = "4"
+oracle = { version = "0.6", features = ["chrono"] }
 serde = "1"
 serde_json = "1"
+futures-io = { version = "0.3", features = ["std"] }
 futures-core = { version = "0.3", default-features = false }
+futures-util = { version = "0.3", features = ["alloc", "sink"] }
 chrono = "0.4"
+rust_decimal = "1.33"
+byteorder = "1.5"
+log = "0.4"
 bigdecimal = { version = "0.4.0", features = ["serde"] }
-tokio = {version="1",features=["fs", "net", "rt", "rt-multi-thread", "time", "io-util"]}
+tokio = { version = "1", features = [
+  "fs",
+  "net",
+  "rt",
+  "rt-multi-thread",
+  "time",
+  "io-util",
+] }
+tokio-util = { version = "0.7", features = ["compat"] }
 url = "2.5.4"
