@@ -7,8 +7,8 @@ edition = "2021"
 serde = { version = "1", features = ["derive"] }
 rbs = "4.7"
 rbdc = { version = "4.8", default-features = false }
-rbdc-oracle={path="../"}
-rbatis = { version = "4.8" , features=["debug_mode"] }
+rbdc-oracle = { path = "../" }
+rbatis = { version = "4.8", features = ["debug_mode"] }
 bigdecimal = { version = "0.4", features = ["serde"] }
 fast_log = "1.5"
 tokio = { version = "1.12", features = ["full"] }

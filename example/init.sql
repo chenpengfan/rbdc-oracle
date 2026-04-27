@@ -1,6 +1,5 @@
 create table T_STUDENT
 (
-    
     ID_CARD  NUMBER not null
         constraint "T_STUDENT_pk"
             primary key,
