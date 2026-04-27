@@ -1,6 +1,6 @@
 [package]
 name = "rbdc-oracle"
-version = "0.8.0"
+version = "0.9.0"
 edition = "2021"
 description = "a simple oracle driver for rbatis"
 readme = "Readme.md"
@@ -8,8 +8,8 @@ authors = ["chenpengfan<chenpengfan1996@gmail.com>"]
 license = "Apache-2.0"
 
 [dependencies]
-rbs = "4.7"
-rbdc = "4.8"
+rbs = "4.8"
+rbdc = "4.9"
 oracle = { version="0.6", features = ["chrono"]}
 serde = "1"
 serde_json = "1"
@@ -18,3 +18,4 @@ chrono = "0.4"
 bigdecimal = { version = "0.4.0", features = ["serde"] }
 tokio = {version="1",features=["fs", "net", "rt", "rt-multi-thread", "time", "io-util"]}
 url = "2.5.4"
+futures-util = "0.3.32"
