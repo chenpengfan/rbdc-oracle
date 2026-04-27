@@ -1,16 +1,17 @@
-RBDC
+RBDC-Oracle
 
-* an database driver abstract
-
-* support zero copy serde-ser/de
-
-Database -> bytes ->rbs::Value-> Struct(User Define)
-Struct(User Define) -> rbs::ValueRef -> ref clone() -> Database
+* Oracle driver for rbatis
 
 
-### how to define my driver?
-should impl trait and load driver
-* impl trait rbdc::db::{Driver, MetaData, Row, Connection, ConnectOptions, Placeholder};
+# Requirements
+- C linker. For example:
+```
+sudo apt install build-essential
+```
+
+- Rbatis. See [Rbatis](https://github.com/rbatis/rbatis)
+
+- Oracle client 11.2 or later. See [ODPI-C installation document](https://oracle.github.io/odpi/doc/installation.html)
 
 ### OracleConnectOptions
 

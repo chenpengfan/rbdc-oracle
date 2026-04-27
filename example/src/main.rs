@@ -30,14 +30,10 @@ async fn simple_py_sql_select(rb: &RBatis, sex: i32) -> Vec<Student> {}
 async fn simple_sql_select(rb: &RBatis, sex: i32) -> Vec<Student> {}
 
 #[html_sql("example.html")]
-async fn select_by_condition(rb: &RBatis, name: Option<String>, age: i32) -> Vec<Student> {}
+async fn select_by_condition(rb: &RBatis,name: Option<String>, age: i32) -> Vec<Student> {}
 
 #[html_sql("example.html")]
-async fn insert_batch(
-    rb: &RBatis,
-    students: &Vec<Student>,
-) -> Result<rbdc::db::ExecResult, rbdc::Error> {
-}
+async fn insert_batch(rb: &RBatis,students: &Vec<Student>) -> Result<rbdc::db::ExecResult, rbdc::Error> {}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct StudentProfile {
@@ -53,20 +49,260 @@ async fn select_first_profile(rb: &RBatis) -> Option<StudentProfile> {}
 #[tokio::main]
 async fn main() {
     fast_log::init(fast_log::Config::new().console()).expect("");
-    let rb = RBatis::new();
+    let mut rb = RBatis::new();
     rb.init_option::<OracleDriver, OracleConnectOptions, DefaultPool>(
         OracleDriver {},
         OracleConnectOptions::with_credentials("user", "123456", "//localhost/school"),
     )
     .expect("rbatis link database fail");
 
-    rb.exec(
-        "create or replace procedure my_proc(val in nvarchar2,c out number) as \n begin \n select count(*) into c from T_STUDENT where NAME like val; \n end;",
-        Vec::with_capacity(0),
+    //execute init.sql before
+
+    //remode old data
+    StudentProfile::delete_by_map(
+        &mut rb,
+        rbs::value! {
+            "id_card >" : "0"
+        },
     )
     .await
-    .unwrap();
+    .expect("delete failed");
+    Student::delete_by_map(
+        &mut rb,
+        rbs::value! {
+            "id_card >" : "0"
+        },
+    )
+    .await
+    .expect("delete failed");
 
+    //insert some data
+    let students = vec![
+        Student {
+            id_card: 2300000000,
+            name: "小张".to_string(),
+            score: BigDecimal::from_str("99.5").unwrap(),
+            birthday: Some(DateTime::from_str("2022-09-01 10:33:07").unwrap()),
+            sex: 2,
+            age: Some(20),
+        },
+        Student {
+            id_card: 2500000000,
+            name: "小强".to_string(),
+            score: BigDecimal::from_str("85.5").unwrap(),
+            birthday: Some(DateTime::from_str("2002-09-01 16:03:20").unwrap()),
+            sex: 1,
+            age: Some(20),
+        },
+        Student {
+            id_card: 2400000000,
+            name: "小明".to_string(),
+            score: BigDecimal::from_str("91.2").unwrap(),
+            birthday: Some(DateTime::from_str("2002-09-01 12:02:49").unwrap()),
+            sex: 1,
+            age: Some(20),
+        },
+        Student {
+            id_card: 2200000000,
+            name: "小红".to_string(),
+            score: BigDecimal::from_str("65.5").unwrap(),
+            birthday: Some(DateTime::from_str("2002-09-01 14:03:20").unwrap()),
+            sex: 2,
+            age: Some(20),
+        },
+    ];
+
+    //Student::insert_batch(&mut rb,&students) not works in Oracle use html insert instead
+    //html batch insert
+    insert_batch(&mut rb,&students).await
+    .expect("batch insert failed");
+
+    //sql select
+    let select_result = simple_sql_select(&rb, 2).await.expect("query failed");
+    assert_eq!(select_result.len(), 2);
+
+    //py_sql select
+    let select_result = simple_py_sql_select(&rb, 2).await.expect("query failed");
+    assert_eq!(select_result.len(), 2);
+
+    //html select
+    let select_result = select_by_condition(&rb ,None , 20).await.expect("query failed");
+    assert_eq!(select_result.len(), 4);
+
+    //html select2
+    let select_result = select_by_condition(&rb ,Some("小红".to_string()) , 20).await.expect("query failed");
+    assert_eq!(select_result.len(), 1);
+    assert_eq!(select_result[0].name, "小红");
+    assert_eq!(select_result[0].age, Some(20));
+
+    //begin transaction
+    let mut tx = rb.acquire_begin().await.unwrap();
+
+    //insert
+    let new_stu = Student {
+        id_card: 2800000000,
+        name: "小王".to_string(),
+        score: BigDecimal::from_str("80").unwrap(),
+        birthday: Some(DateTime::from_str("2022-10-01 10:00:00.000").unwrap()),
+        sex: 1,
+        age: Some(20),
+    };
+    let insert_result = Student::insert(&mut tx, &new_stu)
+        .await
+        .expect("insert failed");
+    assert_eq!(insert_result.rows_affected, 1);
+
+    //update
+    let update_stu = Student {
+        id_card: 2200000000,
+        name: "小红".to_string(),
+        score: BigDecimal::from_str("65.5").unwrap(),
+        birthday: Some(DateTime::from_str("2002-09-01 14:03:20.000").unwrap()),
+        sex: 2,
+        age: Some(21),
+    };
+    let update_result = Student::update_by_map(
+        &mut tx,
+        &update_stu,
+        rbs::value! {
+            "id_card":update_stu.id_card
+        },
+    )
+    .await
+    .expect("update failed");
+    assert_eq!(update_result.rows_affected, 1);
+
+    //delete
+    let delete_result = Student::delete_by_map(
+        &mut tx,
+        rbs::value! {
+            "id_card":"2500000000"
+        },
+    )
+    .await
+    .expect("delete failed");
+    assert_eq!(delete_result.rows_affected, 1);
+
+    //select in transaction
+    let selected = Student::select_by_map(
+        &mut tx,
+        rbs::value! {
+            "id_card":"2500000000"
+        },
+    )
+    .await
+    .expect("select failed");
+    assert_eq!(selected.len(), 0);
+
+    //rollback transaction
+    tx.rollback().await.expect("rollback failed");
+
+    //select after transaction
+    let selected = Student::select_by_map(
+        &mut tx,
+        rbs::value! {
+            "id_card":"2500000000"
+        },
+    )
+    .await
+    .expect("select failed");
+    assert_eq!(selected.len(), 1);
+
+    //begin new transaction
+    let mut tx = rb.acquire_begin().await.unwrap();
+
+    //insert in new transaction
+    let new_stu = Student {
+        id_card: 2800000000,
+        name: "小王".to_string(),
+        score: BigDecimal::from_str("80").unwrap(),
+        birthday: Some(DateTime::from_str("2022-10-01 10:00:00.000").unwrap()),
+        sex: 1,
+        age: Some(20),
+    };
+    let insert_result = Student::insert(&mut tx, &new_stu)
+        .await
+        .expect("insert failed");
+    assert_eq!(insert_result.rows_affected, 1);
+
+    //commit new transaction
+    tx.commit().await.expect("commit failed");
+
+    //select after new transaction
+    let selected = Student::select_by_map(
+        &mut rb,
+        rbs::value! {
+            "id_card":"2800000000"
+        },
+    )
+    .await
+    .expect("select failed");
+    assert_eq!(selected.len(), 1);
+
+    //remove new student
+    Student::delete_by_map(
+        &mut rb,
+        rbs::value! {
+            "id_card":"2800000000"
+        },
+    )
+    .await
+    .expect("delete failed");
+
+    //lob test 1: insert empty lob
+    let stu_profile = StudentProfile {
+        id_card: 2500000000,
+        photo: None,
+        resume: None,
+    };
+    let insert_result = StudentProfile::insert(&mut rb, &stu_profile)
+        .await
+        .expect("insert failed");
+    assert_eq!(insert_result.rows_affected, 1);
+
+    //query from database
+    let inserted: Option<StudentProfile> =
+        select_first_profile(&mut rb).await.expect("select failed");
+    assert!(inserted.is_some());
+    let se = inserted.unwrap();
+    assert!(se.clone().resume.is_none());
+    assert!(se.clone().photo.is_none());
+
+    //remove
+    let delete_result = StudentProfile::delete_by_map(
+        &mut rb,
+        rbs::value! {
+            "id_card":"2500000000"
+        },
+    )
+    .await
+    .expect("delete failed");
+    assert_eq!(delete_result.rows_affected, 1);
+
+    //lob test 2: insert big data
+    let long_text = "abcd".repeat(100);
+    let long_binary = "efgh".repeat(999_999).as_bytes().to_vec();
+    let stu_profile = StudentProfile {
+        id_card: 2300000000,
+        photo: Some(rbdc::bytes::Bytes::from(long_binary.clone())),
+        resume: Some(long_text.clone()),
+    };
+    let insert_result = StudentProfile::insert(&mut rb, &stu_profile)
+        .await
+        .expect("insert failed");
+    assert_eq!(insert_result.rows_affected, 1);
+
+    //query from database
+    let inserted: Option<StudentProfile> =
+        select_first_profile(&mut rb).await.expect("select failed");
+    assert!(inserted.is_some());
+    let se = inserted.unwrap();
+    assert_eq!(se.clone().resume.unwrap(), long_text);
+    assert_eq!(se.clone().photo.unwrap().0, long_binary);
+
+    //procedure test
+    rb.exec("create or replace procedure my_proc(val in nvarchar2,c out number) as \n begin \n select count(*) into c from T_STUDENT where NAME like val; \n end;",vec![]).await.unwrap();
+    //use "last_insert_id" to receive the params
     let procedure_res = rb
         .exec(
             "begin\nmy_proc(:name,:val);\nend;",
@@ -79,13 +315,18 @@ async fn main() {
         Value::String("1".to_string())
     );
 
-    let _ = simple_py_sql_select(&rb, 1).await;
-    let _ = simple_sql_select(&rb, 1).await;
-    let _ = select_by_condition(&rb, None, 1).await;
-    let empty_students = Vec::with_capacity(0);
-    let _ = insert_batch(&rb, &empty_students).await;
-    let _ = select_first_profile(&rb).await;
-
-    let _ = BigDecimal::from_str("1");
-    let _ = DateTime::from_str("2022-09-01 10:33:07");
+    //procedure+function test
+    rb.exec("create or replace function my_func(val in nvarchar2) return number \n as c number; \n begin \n select count(*) into c from T_STUDENT where NAME like val; \n return c; \n end;",vec![]).await.unwrap();
+    //use "last_insert_id" to receive the params
+    let res = rb
+        .exec(
+            "begin \n :ret := my_func(:name); \n end;",
+            vec![Value::I32(0), Value::String("小张".to_string())],
+        )
+        .await
+        .unwrap();
+    assert_eq!(
+        res.last_insert_id.as_array().unwrap()[0],
+        Value::String("1".to_string())
+    );
 }
