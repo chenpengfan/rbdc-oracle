@@ -17,8 +17,6 @@ futures-io = { version = "0.3", features = ["std"] }
 futures-core = { version = "0.3", default-features = false }
 futures-util = { version = "0.3", features = ["alloc", "sink"] }
 chrono = "0.4"
-rust_decimal = "1.33"
-byteorder = "1.5"
 log = "0.4"
 bigdecimal = { version = "0.4.0", features = ["serde"] }
 tokio = { version = "1", features = [
